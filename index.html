@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#c9002b">
+<title>Photo Organizer — 사진 정리</title>
+<meta name="description" content="아이폰·갤럭시 사진을 브라우저에서 일괄 정리, 리사이즈, 변환, 파일명 변경하는 도구">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap');
+:root{--red:#c9002b;--red-dark:#9d0022;--red-soft:#fff0f3;--ink:#241b1d;--muted:#746a6c;--line:#e8dfe1;--paper:#fffdfd;--page:#f7f3f4;--shadow:0 22px 60px rgba(79,15,28,.12);--shadow-small:0 10px 28px rgba(79,15,28,.08)}
+*{box-sizing:border-box}html{background:var(--page);color:var(--ink);font-family:"IBM Plex Sans KR",sans-serif;word-break:keep-all;overflow-wrap:normal}body{margin:0;min-width:320px}button,input,select{font:inherit}button{cursor:pointer;color:inherit}a{color:inherit;text-decoration:none}
+button:focus-visible,input:focus-visible,select:focus-visible,.file-label:focus-within{outline:3px solid rgba(201,0,43,.16);outline-offset:3px}
+.topbar{height:76px;padding:0 clamp(20px,4vw,64px);display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.96);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;backdrop-filter:blur(14px)}
+.brand{display:flex;align-items:center;gap:12px}.brand-mark{width:38px;height:38px;display:grid;place-items:center;background:var(--red);color:white;border-radius:5px 14px 5px 5px;font:800 16px Manrope;box-shadow:0 8px 22px rgba(201,0,43,.19)}
+.brand strong,.brand small{display:block}.brand strong{font:800 15px Manrope}.brand small{font:600 9px Manrope;color:var(--muted);letter-spacing:.06em;margin-top:2px}
+.home{min-height:40px;padding:0 15px;border:1px solid var(--line);border-radius:10px;background:white;display:inline-flex;align-items:center;font-size:12px;font-weight:700}
+.hero{padding:66px clamp(24px,6vw,96px) 56px;background:white;border-bottom:1px solid var(--line);display:grid;grid-template-columns:minmax(0,1.05fr) minmax(300px,.95fr);gap:54px;align-items:end}
+.eyebrow{margin:0 0 13px;color:var(--red);font:800 11px Manrope;letter-spacing:.16em}.hero h1{margin:0;font-size:clamp(38px,5vw,66px);line-height:1.08;letter-spacing:-.055em;text-wrap:balance}.hero h1 span{display:block}.hero h1 em{font-style:normal;color:var(--red)}
+.hero-copy>p:last-child{margin:24px 0 0;max-width:660px;color:var(--muted);font-size:16px;line-height:1.75;text-wrap:pretty}
+.hero-art{display:flex;justify-content:flex-end}.phone-stack{width:290px;height:180px;position:relative}.shot{position:absolute;width:112px;height:148px;border:3px solid var(--ink);border-radius:14px;background:white;box-shadow:var(--shadow-small)}.shot.a{left:28px;top:15px;transform:rotate(-8deg);opacity:.28}.shot.b{right:28px;bottom:0;transform:rotate(8deg);border-color:var(--red);opacity:.28}.shot.main{left:90px;top:8px;display:grid;place-items:center;font:800 18px Manrope}.shot.main:before{content:"";width:48px;height:48px;border:3px solid var(--red);border-radius:50%}.shot.main:after{content:"JPG";position:absolute;bottom:17px;color:var(--red);font:800 12px Manrope}
+.shell{margin:28px clamp(16px,3vw,44px) 54px;background:#fff;border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:var(--shadow);display:grid;grid-template-columns:minmax(330px,390px) minmax(0,1fr)}
+.controls{padding:30px 26px;border-right:1px solid var(--line);display:flex;flex-direction:column}.controls h2,.workspace h2{margin:0;font-size:clamp(24px,2.5vw,32px);letter-spacing:-.035em}.copy{margin:8px 0 0;color:var(--muted);font-size:13px;line-height:1.65}
+.drop{margin-top:24px;min-height:176px;border:1.5px dashed #dca4b0;border-radius:16px;background:#fffafb;display:grid;place-items:center;text-align:center;padding:22px;transition:.18s}.drop.drag{border-color:var(--red);background:var(--red-soft)}
+.upload-icon{width:48px;height:48px;border-radius:50%;background:white;border:1px solid #efcad2;color:var(--red);display:grid;place-items:center;margin:0 auto 12px;font-size:22px}.file-label{display:inline-flex;min-height:42px;padding:0 16px;border-radius:10px;background:var(--red);color:white;align-items:center;font-size:12px;font-weight:700;box-shadow:0 8px 20px rgba(201,0,43,.18)}.file-label input{display:none}.drop small{display:block;margin-top:8px;color:var(--muted);font-size:9px}
+.form{display:grid;gap:14px;margin-top:22px}.field span{display:block;margin-bottom:7px;font-size:11px;font-weight:700}.field select,.field input{width:100%;height:42px;border:1px solid var(--line);border-radius:10px;padding:0 11px;background:white;color:var(--ink)}.field select:focus,.field input:focus{outline:0;border-color:var(--red);box-shadow:0 0 0 3px var(--red-soft)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.action{margin-top:20px;display:grid;grid-template-columns:1fr auto;gap:8px}.btn{min-height:44px;border:0;border-radius:10px;padding:0 16px;font-size:12px;font-weight:700}.btn.primary{background:var(--red);color:white;box-shadow:0 8px 20px rgba(201,0,43,.18)}.btn.primary:hover{background:var(--red-dark)}.btn.ghost{background:white;border:1px solid var(--line)}.btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
+.privacy{margin-top:auto;padding:14px;border-radius:12px;background:#f8f5f5}.privacy strong{font-size:11px}.privacy p{margin:5px 0 0;color:var(--muted);font-size:10px;line-height:1.55}
+.workspace{padding:30px clamp(22px,3vw,38px) 28px;background:var(--paper);min-width:0}.workspace-head{display:flex;align-items:end;justify-content:space-between;gap:18px}.counter{font:700 10px Manrope;color:var(--red)}
+.empty{margin-top:24px;min-height:440px;border:1px solid var(--line);border-radius:16px;background:white;display:grid;place-items:center;text-align:center;color:var(--muted);font-size:12px}.empty strong{display:block;color:var(--ink);font-size:15px;margin-bottom:5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-top:24px}.card{position:relative;border:1px solid var(--line);border-radius:16px;background:white;overflow:hidden;box-shadow:var(--shadow-small);transition:.15s;touch-action:none}.card.dragging{opacity:.55}.card.drag-over{border-color:var(--red);box-shadow:0 0 0 2px var(--red-soft)}.thumb{height:170px;background:#faf7f8;display:grid;place-items:center;overflow:hidden}.thumb img{width:100%;height:100%;object-fit:contain}.meta{padding:11px 12px}.meta strong,.meta small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.meta strong{font-size:11px}.meta small{font-size:9px;color:var(--muted);margin-top:3px}.tools{display:flex;gap:6px;margin-top:9px}.mini{flex:1;min-height:32px;border:1px solid var(--line);border-radius:8px;background:white;font-size:10px;font-weight:700}.mini.danger{color:var(--red)}.order{position:absolute;top:8px;left:8px;min-width:28px;height:28px;padding:0 7px;border-radius:99px;background:rgba(255,255,255,.94);border:1px solid var(--line);display:grid;place-items:center;font:800 9px Manrope;color:var(--red)}.handle{position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,.94);border:1px solid var(--line);display:grid;place-items:center;color:#a89599;cursor:grab;user-select:none}
+.status{display:none;margin-top:18px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:white;font-size:11px;line-height:1.55}.status:before{content:"●";color:var(--red);margin-right:7px}
+@media(max-width:920px){.hero{grid-template-columns:1fr}.hero-art{display:none}.shell{grid-template-columns:1fr}.controls{border-right:0;border-bottom:1px solid var(--line)}.privacy{margin-top:22px}}
+@media(max-width:620px){.topbar{height:66px;padding:0 18px}.brand small{display:none}.hero{padding:38px 20px 34px}.hero h1{font-size:38px}.hero-copy>p:last-child{font-size:14px}.shell{margin:12px 10px 30px;border-radius:16px}.controls,.workspace{padding:24px 18px}.row{grid-template-columns:1fr}.grid{grid-template-columns:1fr 1fr}.thumb{height:145px}.home{font-size:11px;padding:0 11px}}
+@media(max-width:420px){.grid{grid-template-columns:1fr}.hero h1{font-size:34px}.action{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="topbar">
+<a class="brand" href="https://kimhoho8601-alt.github.io/main/"><span class="brand-mark">P</span><span><strong>Photo Organizer</strong><small>field photo utility</small></span></a>
+<a class="home" href="https://kimhoho8601-alt.github.io/main/">← 도구 홈</a>
+</header>
+<section class="hero">
+<div class="hero-copy"><p class="eyebrow">PHOTO ORGANIZER</p><h1><span>아이폰도 갤럭시도,</span><span><em>한 번에 정리</em>합니다.</span></h1><p>HEIC부터 JPG, PNG, WebP까지 기기 구분 없이 올리고 크기·품질·파일명을 한 번에 맞춰 업무용 사진으로 정리하세요.</p></div>
+<div class="hero-art" aria-hidden="true"><div class="phone-stack"><span class="shot a"></span><span class="shot b"></span><span class="shot main"></span></div></div>
+</section>
+<main class="shell">
+<aside class="controls">
+<p class="eyebrow">SETTINGS</p><h2>사진 정리 설정</h2><p class="copy">원본은 그대로 두고, 결과 파일만 새로 만듭니다.</p>
+<div class="drop" id="drop"><div><div class="upload-icon">↑</div><label class="file-label">사진 여러 장 선택<input id="files" type="file" multiple accept=".heic,.heif,.jpg,.jpeg,.png,.webp,image/heic,image/heif,image/jpeg,image/png,image/webp"></label><small>HEIC · HEIF · JPG · PNG · WebP</small></div></div>
+<div class="form">
+<div class="row"><label class="field"><span>긴 변 크기</span><select id="size"><option value="0">원본 유지</option><option value="1920" selected>1920px</option><option value="1280">1280px</option><option value="1024">1024px</option><option value="custom">직접 입력</option></select></label><label class="field"><span>직접 입력</span><input id="customSize" type="number" min="320" max="6000" value="1600" disabled></label></div>
+<div class="row"><label class="field"><span>출력 형식</span><select id="format"><option value="image/jpeg">JPG</option><option value="image/png">PNG</option><option value="image/webp">WebP</option></select></label><label class="field"><span>품질</span><select id="quality"><option value="0.92">높음</option><option value="0.82" selected>보통</option><option value="0.68">용량 우선</option></select></label></div>
+<label class="field"><span>파일명 일괄 변경</span><input id="prefix" type="text" maxlength="40" placeholder="예: 가정방문 (비워두면 원래 이름)"></label>
+</div>
+<div class="action"><button class="btn primary" id="run" disabled>정리해서 ZIP 저장</button><button class="btn ghost" id="clear" disabled>초기화</button></div>
+<div class="status" id="status"></div>
+<div class="privacy"><strong>개인정보 보호</strong><p>사진은 서버로 전송하지 않습니다. 새 이미지로 다시 저장하면서 GPS·촬영기기 정보 등 원본 메타데이터가 제거됩니다.</p></div>
+</aside>
+<section class="workspace">
+<div class="workspace-head"><div><p class="eyebrow">PREVIEW</p><h2>업로드한 사진</h2></div><span class="counter" id="counter">0 FILES</span></div>
+<div class="empty" id="empty"><div><strong>사진을 올리면 여기에서 확인할 수 있습니다</strong>순서 변경 · 90° 회전 · 개별 삭제를 지원합니다.</div></div>
+<div class="grid" id="grid" hidden></div>
+</section>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const input=$('#files'),drop=$('#drop'),grid=$('#grid'),empty=$('#empty'),run=$('#run'),clear=$('#clear'),status=$('#status'),counter=$('#counter');
+const size=$('#size'),customSize=$('#customSize'),format=$('#format'),quality=$('#quality'),prefix=$('#prefix');
+let items=[],dragIndex=null,touchDrag=null;
+size.onchange=()=>customSize.disabled=size.value!=='custom';
+function setStatus(t,show=true){status.textContent=t;status.style.display=show?'block':'none'}
+function fmtBytes(n){if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(1)+' KB';return (n/1048576).toFixed(1)+' MB'}
+function base(n){return n.replace(/\.[^.]+$/,'').replace(/[\\/:*?"<>|]/g,'_')}
+function isHeic(f){return /\.(heic|heif)$/i.test(f.name)||/heic|heif/i.test(f.type)}
+function valid(f){return /\.(heic|heif|jpe?g|png|webp)$/i.test(f.name)||/^image\/(jpeg|png|webp|heic|heif)$/i.test(f.type)}
+async function decodeToBlob(file){if(isHeic(file)){const out=await heic2any({blob:file,toType:'image/jpeg',quality:.95});return Array.isArray(out)?out[0]:out}return file}
+async function loadBitmap(blob){
+  if('createImageBitmap' in window){try{return await createImageBitmap(blob,{imageOrientation:'from-image'})}catch(e){}}
+  const url=URL.createObjectURL(blob),img=new Image();await new Promise((r,j)=>{img.onload=r;img.onerror=j;img.src=url});URL.revokeObjectURL(url);return img
+}
+async function makePreview(file){
+  const blob=await decodeToBlob(file),bm=await loadBitmap(blob),max=700,ratio=Math.min(1,max/Math.max(bm.width,bm.height)),c=document.createElement('canvas');
+  c.width=Math.max(1,Math.round(bm.width*ratio));c.height=Math.max(1,Math.round(bm.height*ratio));c.getContext('2d').drawImage(bm,0,0,c.width,c.height);if(bm.close)bm.close();return c.toDataURL('image/jpeg',.78)
+}
+async function addFiles(list){
+  const files=[...list].filter(valid);if(!files.length){alert('지원되는 사진 파일을 선택해주세요.');return}
+  setStatus('미리보기를 준비 중입니다...');
+  for(const f of files){try{items.push({file:f,rotation:0,preview:await makePreview(f)})}catch(e){console.error(e)}}
+  render();setStatus(items.length+'장 준비 완료');input.value=''
+}
+input.onchange=e=>addFiles(e.target.files);
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag')}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag')}));
+drop.addEventListener('drop',e=>addFiles(e.dataTransfer.files));
+function moveItem(from,to){if(from===to||from<0||to<0||from>=items.length||to>=items.length)return;const [m]=items.splice(from,1);items.splice(to,0,m);render()}
+function render(){
+  counter.textContent=items.length+' FILES';run.disabled=!items.length;clear.disabled=!items.length;empty.hidden=!!items.length;grid.hidden=!items.length;grid.innerHTML='';
+  items.forEach((it,i)=>{
+    const card=document.createElement('article');card.className='card';card.draggable=true;card.dataset.i=i;
+    card.innerHTML='<span class="order">'+String(i+1).padStart(2,'0')+'</span><span class="handle">☷</span><div class="thumb"><img src="'+it.preview+'" style="transform:rotate('+it.rotation+'deg)"></div><div class="meta"><strong>'+escapeHtml(it.file.name)+'</strong><small>'+fmtBytes(it.file.size)+'</small><div class="tools"><button class="mini rot">↻ 회전</button><button class="mini danger del">삭제</button></div></div>';
+    card.querySelector('.rot').onclick=()=>{it.rotation=(it.rotation+90)%360;render()};
+    card.querySelector('.del').onclick=()=>{items.splice(i,1);render()};
+    card.ondragstart=e=>{dragIndex=i;card.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',String(i))};
+    card.ondragend=()=>{dragIndex=null;document.querySelectorAll('.card').forEach(x=>x.classList.remove('dragging','drag-over'))};
+    card.ondragover=e=>{e.preventDefault();card.classList.add('drag-over')};
+    card.ondragleave=()=>card.classList.remove('drag-over');
+    card.ondrop=e=>{e.preventDefault();card.classList.remove('drag-over');const from=dragIndex!==null?dragIndex:Number(e.dataTransfer.getData('text/plain'));moveItem(from,i);dragIndex=null};
+    card.addEventListener('touchstart',e=>{if(e.touches.length!==1)return;touchDrag=i;card.classList.add('dragging')},{passive:true});
+    card.addEventListener('touchmove',e=>{if(touchDrag===null||e.touches.length!==1)return;const t=document.elementFromPoint(e.touches[0].clientX,e.touches[0].clientY)?.closest('.card');document.querySelectorAll('.card').forEach(x=>x.classList.remove('drag-over'));if(t)t.classList.add('drag-over')},{passive:true});
+    card.addEventListener('touchend',e=>{const t=document.elementFromPoint(e.changedTouches?.[0]?.clientX||0,e.changedTouches?.[0]?.clientY||0)?.closest('.card');document.querySelectorAll('.card').forEach(x=>x.classList.remove('dragging','drag-over'));if(t&&touchDrag!==null)moveItem(touchDrag,Number(t.dataset.i));touchDrag=null});
+    grid.appendChild(card)
+  })
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+clear.onclick=()=>{items=[];render();setStatus('',false)};
+async function processItem(it){
+  const source=await decodeToBlob(it.file),bm=await loadBitmap(source);let w=bm.width,h=bm.height;
+  const target=size.value==='custom'?Number(customSize.value)||0:Number(size.value);if(target>0&&Math.max(w,h)>target){const r=target/Math.max(w,h);w=Math.round(w*r);h=Math.round(h*r)}
+  const rot=it.rotation%360,swap=rot===90||rot===270,c=document.createElement('canvas');c.width=swap?h:w;c.height=swap?w:h;
+  const ctx=c.getContext('2d');ctx.save();ctx.translate(c.width/2,c.height/2);ctx.rotate(rot*Math.PI/180);ctx.drawImage(bm,-w/2,-h/2,w,h);ctx.restore();if(bm.close)bm.close();
+  const blob=await new Promise(r=>c.toBlob(r,format.value,Number(quality.value)));if(!blob)throw new Error('ENCODE');return blob
+}
+run.onclick=async()=>{
+  if(!items.length)return;run.disabled=true;clear.disabled=true;
+  try{
+    const zip=new JSZip(),ext=format.value==='image/png'?'png':format.value==='image/webp'?'webp':'jpg',p=prefix.value.trim();
+    for(let i=0;i<items.length;i++){setStatus((i+1)+' / '+items.length+' 처리 중...');const blob=await processItem(items[i]);const name=p?(base(p)+'_'+String(i+1).padStart(2,'0')+'.'+ext):(base(items[i].file.name)+'.'+ext);zip.file(name,blob)}
+    setStatus('ZIP 파일 생성 중...');const out=await zip.generateAsync({type:'blob'});const a=document.createElement('a'),u=URL.createObjectURL(out);a.href=u;a.download=(p?base(p):'photo_organized')+'.zip';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500);setStatus('완료! '+items.length+'장의 사진을 정리했습니다.')
+  }catch(e){console.error(e);setStatus('처리 중 오류가 발생했습니다. 다른 사진으로 다시 시도해주세요.')}
+  finally{run.disabled=false;clear.disabled=false}
+};
+render();
+</script>
+</body>
+</html>
