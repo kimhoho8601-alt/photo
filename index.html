@@ -128,7 +128,13 @@ run.onclick=async()=>{
   if(!items.length)return;run.disabled=true;clear.disabled=true;
   try{
     const zip=new JSZip(),ext=format.value==='image/png'?'png':format.value==='image/webp'?'webp':'jpg',p=prefix.value.trim();
-    for(let i=0;i<items.length;i++){setStatus((i+1)+' / '+items.length+' 처리 중...');const blob=await processItem(items[i]);const name=p?(base(p)+'_'+String(i+1).padStart(2,'0')+'.'+ext):(base(items[i].file.name)+'.'+ext);zip.file(name,blob)}
+    const usedNames=new Set();
+    for(let i=0;i<items.length;i++){
+      setStatus((i+1)+' / '+items.length+' 처리 중...');const blob=await processItem(items[i]);
+      const stem=p?base(p)+'_'+String(i+1).padStart(2,'0'):base(items[i].file.name);let name=stem+'.'+ext;
+      for(let n=2;usedNames.has(name);n++)name=stem+'_'+String(n).padStart(2,'0')+'.'+ext;
+      usedNames.add(name);zip.file(name,blob)
+    }
     setStatus('ZIP 파일 생성 중...');const out=await zip.generateAsync({type:'blob'});const a=document.createElement('a'),u=URL.createObjectURL(out);a.href=u;a.download=(p?base(p):'photo_organized')+'.zip';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500);setStatus('완료! '+items.length+'장의 사진을 정리했습니다.')
   }catch(e){console.error(e);setStatus('처리 중 오류가 발생했습니다. 다른 사진으로 다시 시도해주세요.')}
   finally{run.disabled=false;clear.disabled=false}
